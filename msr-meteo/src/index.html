@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MSR Meteo">
+<meta name="application-name" content="MSR Meteo">
+<meta name="theme-color" content="#e8872a">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🌅 MSR 2026 — Meteo Gara · Midnight Sun Randonnée</title>
+<link rel="icon" href="https://midnightsunrandonnee.se/wp-content/uploads/2019/12/cropped-MSR-favicon-1-32x32.png" sizes="32x32">
+<link rel="icon" href="https://midnightsunrandonnee.se/wp-content/uploads/2019/12/cropped-MSR-favicon-1-192x192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="https://midnightsunrandonnee.se/wp-content/uploads/2019/12/cropped-MSR-favicon-1-192x192.png">
+<link rel="manifest" href="manifest.json">
+<!-- STYLE_PLACEHOLDER -->
+</head>
+<body>
+
+<!-- ── Header ── -->
+<div class="header">
+  <h1>🌅 <span>MSR 2026</span> Meteo
+    <div class="sub">Midnight Sun Randonnée · Umeå ↔ Arctic Circle · 1215 km</div>
+  </h1>
+  <button class="btn-settings" id="btnSettings" onclick="openSettings()">⚙️ Impostazioni</button>
+  <button class="btn-refresh" onclick="refreshAll()">🔄 Aggiorna</button>
+</div>
+<div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+<div class="update-info" id="updateInfo">Caricamento in corso...</div>
+
+<!-- ── Summary bar ── -->
+<div class="summary-bar">
+  <div class="sb-item"><div class="sb-val">1215</div>km</div>
+  <div class="sb-item"><div class="sb-val">14296</div>m D+</div>
+  <div class="sb-item"><div class="sb-val">13</div>CP</div>
+  <div class="sb-item"><div class="sb-val">∼80h</div>tempo</div>
+  <div class="sb-item"><div class="sb-val">5ª</div>Ed.</div>
+</div>
+
+<!-- ── Allerte ── -->
+<div class="section open" id="alertsSection">
+  <div class="section-head" onclick="toggleSection('alertsSection')">
+    <h2>⚠️ Allerta Meteo</h2><span class="sec-arrow">▼</span>
+  </div>
+  <div class="section-body">
+    <div class="alert-list" id="alertList">
+      <div class="wx-loading"><div class="spinner"></div><br>Analisi in corso...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Grafici ── -->
+<div class="section open" id="chartsSection">
+  <div class="section-head" onclick="toggleSection('chartsSection')">
+    <h2>📊 Grafici Percorso</h2><span class="sec-arrow">▼</span>
+  </div>
+  <div class="section-body">
+    <div class="chart-src-pills" id="chartPills">
+      <button class="pill active" onclick="switchChartSrc('ecmwf')">ECMWF</button>
+      <button class="pill" onclick="switchChartSrc('forecast')">Forecast</button>
+      <button class="pill" onclick="switchChartSrc('yr')">yr.no</button>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-title">🌡️ Temperatura lungo il percorso (°C)</div>
+      <canvas id="chartTemp" width="800" height="400"></canvas>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-title">🌧️ Precipitazioni (mm/h) e 💨 Vento (km/h)</div>
+      <canvas id="chartPrecWind" width="800" height="400"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- ── Cards checkpoint ── -->
+<div class="cards" id="cardsContainer"></div>
+
+<!-- ── Legenda ── -->
+<div class="legend">
+  <h3>📖 Legenda Meteo</h3>
+  <div class="legend-grid">
+    <div class="legend-item"><span class="temp-blue">■</span> &lt;5°C — Gelo</div>
+    <div class="legend-item"><span class="temp-cyan">■</span> 5-10°C — Molto freddo</div>
+    <div class="legend-item"><span class="temp-green">■</span> 10-15°C — Fresco</div>
+    <div class="legend-item"><span class="temp-yellow">■</span> 15-20°C — Mite</div>
+    <div class="legend-item"><span class="temp-orange">■</span> 20-25°C — Caldo</div>
+    <div class="legend-item"><span class="temp-red">■</span> &gt;25°C — Molto caldo</div>
+  </div>
+</div>
+
+<!-- ── Footer ── -->
+<div class="footer">
+  Dati: <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> ·
+  <a href="https://www.yr.no" target="_blank">yr.no / MET Norway</a> ·
+  <a href="https://www.smhi.se" target="_blank">SMHI</a><br>
+  <a href="https://midnightsunrandonnee.se" target="_blank">midnightsunrandonnee.se</a>
+</div>
+
+<!-- ── PWA Install Banner ── -->
+<div class="install-banner" id="installBanner">
+  <div class="install-banner-icon">🌅</div>
+  <div class="install-banner-text">
+    <div class="install-banner-title">Installa MSR Meteo</div>
+    <div class="install-banner-sub">Aggiungi alla schermata home per accesso rapido</div>
+  </div>
+  <div class="install-banner-actions">
+    <button class="btn-install" id="btnInstall">Installa</button>
+    <button class="btn-install-dismiss" onclick="dismissInstall()">Non ora</button>
+  </div>
+</div>
+
+<!-- ── iOS tip ── -->
+<div class="ios-tip" id="iosTip">
+  <button class="ios-tip-close" onclick="document.getElementById('iosTip').classList.remove('show');localStorage.setItem('msr_ios_dismissed','1')">✕</button>
+  <div class="ios-tip-title">📲 Installa su iPhone / iPad</div>
+  Tocca <strong>⎋ Condividi</strong> in Safari, poi<br>
+  <strong>"Aggiungi a schermata Home"</strong>
+</div>
+
+<!-- ── Settings panel ── -->
+<div class="settings-overlay" id="settingsOverlay" onclick="handleOverlayClick(event)">
+  <div class="settings-panel" id="settingsPanel">
+    <div class="settings-drag"></div>
+    <div class="settings-header">
+      <h2>⚙️ Impostazioni</h2>
+      <button class="btn-close-settings" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-title">🔠 Dimensione testo</div>
+      <div class="font-size-row">
+        <span class="font-size-label">Carattere</span>
+        <div class="font-size-controls">
+          <button class="font-btn" onclick="changeFontSize(-1)">A−</button>
+          <div class="font-size-val" id="fontSizeDisplay">14px</div>
+          <button class="font-btn" onclick="changeFontSize(+1)">A+</button>
+        </div>
+      </div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-title">🚴 Velocità media per tappa (km/h)</div>
+      <div class="speed-grid" id="speedGrid"></div>
+    </div>
+    <div class="settings-section">
+      <button class="settings-apply-btn" onclick="applySettings()">✅ Applica e ricalcola orari</button>
+      <button class="settings-reset-btn" onclick="resetSettings()">↩ Ripristina valori originali</button>
+    </div>
+  </div>
+</div>
+
+<!-- SCRIPTS_PLACEHOLDER -->
+</body>
+</html>
