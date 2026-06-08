@@ -5,6 +5,7 @@
 // Costanti meteo
 const WMO_ICONS={0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌦️',56:'🌧️❄️',57:'🌧️❄️',61:'🌧️',63:'🌧️',65:'🌧️🌧️',66:'🌧️❄️',67:'🌧️❄️',71:'🌨️',73:'🌨️',75:'🌨️🌨️',77:'🌨️',80:'🌦️',81:'🌧️',82:'⛈️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️'};
 const WMO_DESC={0:'Sereno',1:'Prev. sereno',2:'Parz. nuvoloso',3:'Coperto',45:'Nebbia',48:'Nebbia gelata',51:'Pioviggine legg.',53:'Pioviggine',55:'Pioviggine intensa',56:'Piovig. gelata',57:'Piovig. gelata int.',61:'Pioggia legg.',63:'Pioggia moderata',65:'Pioggia intensa',66:'Pioggia gelata',67:'Pioggia gelata int.',71:'Neve legg.',73:'Neve moderata',75:'Neve intensa',77:'Granelli neve',80:'Rovesci legg.',81:'Rovesci',82:'Rovesci violenti',85:'Neve legg.',86:'Neve intensa',95:'Temporale',96:'Temporale grandine',99:'Temporale grand.'};
+const APP_BUILD_NUMBER = '1';
 
 const LANG_MAP = {
   it: {
@@ -23,6 +24,7 @@ const LANG_MAP = {
     languageSectionTitle: '🌍 Lingua',
     applyBtn: '✅ Applica e ricalcola orari',
     resetBtn: '↩ Ripristina valori originali',
+    buildLabel: 'Build',
     mapTitle: '🗺️ Mini mappa checkpoint',
     loadingText: 'Caricamento in corso...',
     cachedInfo: '✅ Dati dalla cache —',
@@ -60,6 +62,7 @@ const LANG_MAP = {
     languageSectionTitle: '🌍 Language',
     applyBtn: '✅ Apply and recalc times',
     resetBtn: '↩ Reset defaults',
+    buildLabel: 'Build',
     mapTitle: '🗺️ Checkpoint mini map',
     loadingText: 'Loading...',
     cachedInfo: '✅ Cache data —',
@@ -97,6 +100,7 @@ const LANG_MAP = {
     languageSectionTitle: '🌍 Sprache',
     applyBtn: '✅ Anwenden und Zeiten neu berechnen',
     resetBtn: '↩ Auf Standard zurücksetzen',
+    buildLabel: 'Build',
     mapTitle: '🗺️ Checkpoint Mini-Karte',
     loadingText: 'Lädt...',
     cachedInfo: '✅ Daten aus dem Cache —',
@@ -134,6 +138,7 @@ const LANG_MAP = {
     languageSectionTitle: '🌍 Langue',
     applyBtn: '✅ Appliquer et recalculer',
     resetBtn: '↩ Rétablir les valeurs',
+    buildLabel: 'Build',
     mapTitle: '🗺️ Mini carte des checkpoints',
     loadingText: 'Chargement...',
     cachedInfo: '✅ Données du cache —',
@@ -172,6 +177,8 @@ function applyLanguage() {
   if (miniMapTitle) miniMapTitle.textContent = t('mapTitle');
   const settingsHeader = document.querySelector('#settingsOverlay .settings-header h2');
   if (settingsHeader) settingsHeader.textContent = t('btnSettings');
+  const buildVersion = document.getElementById('settingsBuild');
+  if (buildVersion) buildVersion.textContent = `${t('buildLabel')} ${APP_BUILD_NUMBER}`;
   document.querySelector('.section#alertsSection .section-head h2').textContent = t('alertsTitle');
   document.querySelector('.section#chartsSection .section-head h2').textContent = t('chartsTitle');
   document.getElementById('speedSectionTitle').textContent = t('speedSectionTitle');
@@ -244,7 +251,7 @@ ${sources.map(src=>`<button class="src-tab ${src===activeSrc?'active':''}" data-
 <div id="timeline${cp.n}" class="timeline"></div>
 <div class="links-row">
 <a href="https://www.yr.no/en/forecast/daily-table/${cp.lat},${cp.lon}" target="_blank" rel="noopener">🔗 yr.no</a>
-${cp.cc==='SE'?'<a href="https://www.smhi.se/en/weather/forecast" target="_blank" rel="noopener">🔗 SMHI</a>':''}
+${cp.cc==='SE'?`<a href="${cp.n===1?'https://www.smhi.se/en/weather/warnings-and-forecasts/weather-forecast/q/Ume%C3%A5/602150':'https://www.smhi.se/en/weather/forecast'}" target="_blank" rel="noopener">🔗 SMHI</a>`:''}
 <a href="https://open-meteo.com/en/docs/ecmwf-api#latitude=${cp.lat}&longitude=${cp.lon}" target="_blank" rel="noopener">🔗 Open-Meteo</a>
 </div>
 </div>
@@ -535,12 +542,17 @@ function symbolToWmo(sym){if(!sym)return null;const s=sym.replace(/_day|_night|_
 
 async function fetchSMHI(cp){
   if(cp.cc!=='SE')return{error:'Solo località svedesi'};
-  const url=`https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${cp.lon.toFixed(4)}/lat/${cp.lat.toFixed(4)}/data.json`;
-  try{const r=await fetch(url);if(!r.ok)return{error:'HTTP '+r.status};const j=await r.json();
-  const ts=j.timeSeries;const times=[],temperature=[],precipitation=[],weather_code=[],cloud_cover=[],wind_speed=[],wind_dir=[],wind_gust=[],humidity=[];
-  ts.forEach(t=>{const utc=new Date(t.validTime);const local=new Date(utc.getTime()+2*3600000);times.push(local.toISOString().slice(0,16));const p={};t.parameters.forEach(pr=>{p[pr.name]=pr.values[0]});
-  temperature.push(p.t!=null?p.t:null);wind_speed.push(p.ws!=null?p.ws*3.6:null);wind_dir.push(p.wd!=null?p.wd:null);wind_gust.push(p.gust!=null?p.gust*3.6:null);precipitation.push(p.pmean!=null?p.pmean:null);cloud_cover.push(p.tcc_mean!=null?p.tcc_mean*12.5:null);humidity.push(p.r!=null?p.r:null);weather_code.push(smhiWsymb(p.Wsymb2))});
-  return{times,temperature,apparent_temp:temperature.map(()=>null),precipitation,weather_code,cloud_cover,wind_speed,wind_dir,wind_gust,humidity}}catch(e){return{error:'Rete non disponibile'}}
+  let lastError='SMHI non disponibile';
+  for(const decimals of [4,3,2]){
+    const lon=cp.lon.toFixed(decimals);const lat=cp.lat.toFixed(decimals);
+    const url=`https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon}/lat/${lat}/data.json`;
+    try{const r=await fetch(url,{headers:{Accept:'application/json'}});if(!r.ok){lastError='HTTP '+r.status; if(r.status===404)continue;return{error:lastError}}const j=await r.json();
+    const ts=j.timeSeries;const times=[],temperature=[],precipitation=[],weather_code=[],cloud_cover=[],wind_speed=[],wind_dir=[],wind_gust=[],humidity=[];
+    ts.forEach(t=>{const utc=new Date(t.validTime);const local=new Date(utc.getTime()+2*3600000);times.push(local.toISOString().slice(0,16));const p={};t.parameters.forEach(pr=>{p[pr.name]=pr.values[0]});
+    temperature.push(p.t!=null?p.t:null);wind_speed.push(p.ws!=null?p.ws*3.6:null);wind_dir.push(p.wd!=null?p.wd:null);wind_gust.push(p.gust!=null?p.gust*3.6:null);precipitation.push(p.pmean!=null?p.pmean:null);cloud_cover.push(p.tcc_mean!=null?p.tcc_mean*12.5:null);humidity.push(p.r!=null?p.r:null);weather_code.push(smhiWsymb(p.Wsymb2))});
+    return{times,temperature,apparent_temp:temperature.map(()=>null),precipitation,weather_code,cloud_cover,wind_speed,wind_dir,wind_gust,humidity};
+    }catch(e){lastError=e.message||'Rete non disponibile'}}
+  return{error:lastError};
 }
 
 function smhiWsymb(w){if(w==null)return null;const map={1:0,2:1,3:2,4:3,5:3,6:3,7:45,8:80,9:61,10:63,11:82,12:95,13:66,14:66,15:75,16:71,17:73,18:65,19:71,20:81,21:95,22:85,23:85,24:95,25:65,26:75,27:95};return map[w]!=null?map[w]:3}
@@ -556,7 +568,7 @@ async function fetchAllForCP(cp){
     ecmwf:ecmwf.status==='fulfilled'?ecmwf.value:{error:'Errore fetch'},
     forecast:forecast.status==='fulfilled'?forecast.value:{error:'Errore fetch'},
     yr:yr.status==='fulfilled'?yr.value:{error:'Errore fetch'},
-    smhi:smhi.status==='fulfilled'?smhi.value:{error:'Solo 🇸🇪'}
+    smhi:smhi.status==='fulfilled'?smhi.value:{error:smhi.reason?.message||'Errore SMHI'}
   };
 }
 

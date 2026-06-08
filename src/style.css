@@ -148,7 +148,9 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .settings-panel{background:#1a2d42;border-radius:20px 20px 0 0;padding:0;width:100%;max-width:520px;max-height:88vh;overflow-y:auto;border:1px solid rgba(255,255,255,.08);border-bottom:none;box-shadow:0 -8px 40px rgba(0,0,0,.5)}
 .settings-drag{width:40px;height:4px;background:rgba(255,255,255,.2);border-radius:2px;margin:12px auto 0}
 .settings-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 10px;border-bottom:1px solid rgba(255,255,255,.07)}
+.settings-header-left{display:flex;flex-direction:column;gap:4px}
 .settings-header h2{font-size:1.0714em;font-weight:700;color:var(--text)}
+.settings-version{font-size:0.85em;color:var(--text2)}
 .btn-close-settings{background:rgba(255,255,255,.08);border:none;color:var(--text2);width:28px;height:28px;border-radius:50%;font-size:1.1429em;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
 .btn-close-settings:hover{background:rgba(255,255,255,.15);color:var(--text)}
 .settings-section{padding:14px 18px}
