@@ -323,17 +323,27 @@ function toggleCard(n,e){
   const card=document.getElementById('card'+n);
   card.classList.toggle('open');
   if(card.classList.contains('open')&&weatherData[n]){
+    const cp=CPS[n-1];
     const activeBtn=document.querySelector('#tabs'+n+' .src-tab.active');
-    const src=activeBtn?activeBtn.dataset.src:'ecmwf';
+    let src=activeBtn?activeBtn.dataset.src:'ecmwf';
+    src=findWorkingSource(n,cp,src);
+    const allTabs=document.querySelectorAll('#tabs'+n+' .src-tab');
+    allTabs.forEach(t=>t.classList.remove('active'));
+    const actualBtn=Array.from(allTabs).find(t=>t.dataset.src===src);
+    if(actualBtn)actualBtn.classList.add('active');
     renderWeather(n,src);
     renderTimeline(n,src);
   }
 }
 
 function switchSrc(n,src,btn){
+  const cp=CPS[n-1];
+  src=findWorkingSource(n,cp,src);
   const tabs=document.querySelectorAll('#tabs'+n+' .src-tab');
   tabs.forEach(t=>t.classList.remove('active'));
-  if(btn)btn.classList.add('active');
+  const activeBtn=Array.from(tabs).find(t=>t.dataset.src===src);
+  if(activeBtn)activeBtn.classList.add('active');
+  else if(btn)btn.classList.add('active');
   renderWeather(n,src);
   renderTimeline(n,src);
 }
@@ -349,13 +359,25 @@ function findClosest(times,target){
   return best;
 }
 
+function findWorkingSource(n,cp,preferredSrc){
+  const data=weatherData[n];
+  if(!data)return preferredSrc;
+  const sources=sourceOrder(cp);
+  if(data[preferredSrc]&&!data[preferredSrc].error)return preferredSrc;
+  for(const src of sources){
+    if(data[src]&&!data[src].error)return src;
+  }
+  return preferredSrc;
+}
+
 // ── Render meteo ─────────────────────────────────────────────────────────────
 function renderWeather(n,src){
   const el=document.getElementById('wx'+n);
   const cp=CPS[n-1];
-  const refTime=cp.arr||cp.dep;
   const data=weatherData[n];
   if(!data){el.innerHTML='<div class="wx-loading"><div class="spinner"></div><br>Caricamento...</div>';return}
+  src=findWorkingSource(n,cp,src);
+  const refTime=cp.arr||cp.dep;
   const srcData=data[src];
   if(!srcData||srcData.error){el.innerHTML=`<div class="wx-error">⚠️ ${srcData?srcData.error:'Non disponibile'}</div>`;return}
   const idx=findClosest(srcData.times,refTime);
@@ -391,6 +413,7 @@ function renderTimeline(n,src){
   if(!cp.arr||!cp.dep){el.innerHTML='';return}
   const data=weatherData[n];
   if(!data){el.innerHTML='';return}
+  src=findWorkingSource(n,cp,src);
   const srcData=data[src];
   if(!srcData||srcData.error){el.innerHTML='';return}
   const startH=new Date(cp.arr).getTime();

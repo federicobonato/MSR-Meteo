@@ -383,21 +383,22 @@ const START_DEP = '2026-06-14T23:30:00';
 // Checkpoint della gara
 // Campi: n=numero, name=nome, cc=nazione (SE/NO), lat/lon=coordinate,
 //        km=km progressivi, kms=km tappa, elev=dislivello tappa,
-//        arr=orario arrivo previsto, dep=orario partenza previsto, stopMinutes=sosta in minuti
+//        stopMinutes=sosta in minuti
+// Orari di arrivo/partenza vengono calcolati a runtime in base alla velocità media e alla sosta
 const CPS = [
-  {n:1, name:"Scandic Plaza Umeå",            cc:"SE", lat:63.826, lon:20.263, km:0,    kms:0,   elev:0,    arr:"2026-06-14T16:00:00", dep:START_DEP, stopMinutes:0},
-  {n:2, name:"Granö – Granö Beckasin",        cc:"SE", lat:64.204, lon:19.719, km:123,  kms:123, elev:1139, arr:"2026-06-15T04:25:12", dep:"2026-06-15T04:55:12", stopMinutes:30},
-  {n:3, name:"Lycksele – Hotel Lappland",      cc:"SE", lat:64.158, lon:17.334, km:241,  kms:118, elev:1127, arr:"2026-06-15T09:38:24", dep:"2026-06-15T10:08:24", stopMinutes:30},
-  {n:4, name:"Vilhelmina – Hotel Wilhelmina", cc:"SE", lat:64.624, lon:16.656, km:359,  kms:118, elev:2087, arr:"2026-06-15T14:51:36", dep:"2026-06-15T15:51:36", stopMinutes:60},
-  {n:5, name:"Kittelfjäll – Fjälltorget",    cc:"SE", lat:65.178, lon:15.003, km:488,  kms:129, elev:1658, arr:"2026-06-15T21:01:12", dep:"2026-06-15T22:01:12", stopMinutes:60},
-  {n:6, name:"Hattfjelldal – Hattfjelldal Hotel", cc:"NO", lat:65.571, lon:13.981, km:587, kms:99, elev:1049, arr:"2026-06-16T01:58:48", dep:"2026-06-16T05:58:48", stopMinutes:240},
-  {n:7, name:"Mo i Rana – Hotel Scandia",     cc:"NO", lat:66.313, lon:14.143, km:699,  kms:112, elev:1454, arr:"2026-06-16T10:27:36", dep:"2026-06-16T11:27:36", stopMinutes:60},
-  {n:8, name:"Arctic Circle – Polarsirkelsenteret", cc:"NO", lat:66.564, lon:15.314, km:780, kms:81, elev:1468, arr:"2026-06-16T14:42:00", dep:"2026-06-16T15:42:00", stopMinutes:60},
-  {n:9, name:"Vuoggatjålme – Campo",          cc:"SE", lat:66.567, lon:16.350, km:873,  kms:93,  elev:1270, arr:"2026-06-16T19:25:12", dep:"2026-06-17T00:25:12", stopMinutes:300},
-  {n:10,name:"Arjeplog – Hornavan Hotel",     cc:"SE", lat:66.052, lon:17.889, km:978,  kms:105, elev:912,  arr:"2026-06-17T04:37:12", dep:"2026-06-17T05:37:12", stopMinutes:60},
-  {n:11,name:"Sorsele – Sorsele River Hotel", cc:"SE", lat:65.532, lon:17.534, km:1069, kms:91,  elev:741,  arr:"2026-06-17T09:15:36", dep:"2026-06-17T10:15:36", stopMinutes:60},
-  {n:12,name:"Åmsele – Campeggio",            cc:"SE", lat:64.520, lon:18.412, km:1226, kms:157, elev:1324, arr:"2026-06-17T16:32:24", dep:"2026-06-17T20:32:24", stopMinutes:240},
-  {n:13,name:"Scandic Plaza Umeå",            cc:"SE", lat:63.826, lon:20.263, km:1333, kms:107, elev:1025, arr:"2026-06-18T00:49:12", dep:null, stopMinutes:0}
+  {n:1, name:"Scandic Plaza Umeå",            cc:"SE", lat:63.826, lon:20.263, km:0,    kms:0,   elev:0,    stopMinutes:0},
+  {n:2, name:"Granö – Granö Beckasin",        cc:"SE", lat:64.204, lon:19.719, km:123,  kms:123, elev:1139, stopMinutes:30},
+  {n:3, name:"Lycksele – Hotel Lappland",      cc:"SE", lat:64.158, lon:17.334, km:241,  kms:118, elev:1127, stopMinutes:30},
+  {n:4, name:"Vilhelmina – Hotel Wilhelmina", cc:"SE", lat:64.624, lon:16.656, km:359,  kms:118, elev:2087, stopMinutes:60},
+  {n:5, name:"Kittelfjäll – Fjälltorget",    cc:"SE", lat:65.178, lon:15.003, km:488,  kms:129, elev:1658, stopMinutes:60},
+  {n:6, name:"Hattfjelldal – Hattfjelldal Hotel", cc:"NO", lat:65.571, lon:13.981, km:587, kms:99, elev:1049, stopMinutes:240},
+  {n:7, name:"Mo i Rana – Hotel Scandia",     cc:"NO", lat:66.313, lon:14.143, km:699,  kms:112, elev:1454, stopMinutes:60},
+  {n:8, name:"Arctic Circle – Polarsirkelsenteret", cc:"NO", lat:66.564, lon:15.314, km:780, kms:81, elev:1468, stopMinutes:60},
+  {n:9, name:"Vuoggatjålme – Campo",          cc:"SE", lat:66.567, lon:16.350, km:873,  kms:93,  elev:1270, stopMinutes:300},
+  {n:10,name:"Arjeplog – Hornavan Hotel",     cc:"SE", lat:66.052, lon:17.889, km:978,  kms:105, elev:912,  stopMinutes:60},
+  {n:11,name:"Sorsele – Sorsele River Hotel", cc:"SE", lat:65.532, lon:17.534, km:1069, kms:91,  elev:741,  stopMinutes:60},
+  {n:12,name:"Åmsele – Campeggio",            cc:"SE", lat:64.520, lon:18.412, km:1226, kms:157, elev:1324, stopMinutes:240},
+  {n:13,name:"Scandic Plaza Umeå",            cc:"SE", lat:63.826, lon:20.263, km:1333, kms:107, elev:1025, stopMinutes:0}
 ];
 
 // Soglie allerta meteo
@@ -747,17 +748,27 @@ function toggleCard(n,e){
   const card=document.getElementById('card'+n);
   card.classList.toggle('open');
   if(card.classList.contains('open')&&weatherData[n]){
+    const cp=CPS[n-1];
     const activeBtn=document.querySelector('#tabs'+n+' .src-tab.active');
-    const src=activeBtn?activeBtn.dataset.src:'ecmwf';
+    let src=activeBtn?activeBtn.dataset.src:'ecmwf';
+    src=findWorkingSource(n,cp,src);
+    const allTabs=document.querySelectorAll('#tabs'+n+' .src-tab');
+    allTabs.forEach(t=>t.classList.remove('active'));
+    const actualBtn=Array.from(allTabs).find(t=>t.dataset.src===src);
+    if(actualBtn)actualBtn.classList.add('active');
     renderWeather(n,src);
     renderTimeline(n,src);
   }
 }
 
 function switchSrc(n,src,btn){
+  const cp=CPS[n-1];
+  src=findWorkingSource(n,cp,src);
   const tabs=document.querySelectorAll('#tabs'+n+' .src-tab');
   tabs.forEach(t=>t.classList.remove('active'));
-  if(btn)btn.classList.add('active');
+  const activeBtn=Array.from(tabs).find(t=>t.dataset.src===src);
+  if(activeBtn)activeBtn.classList.add('active');
+  else if(btn)btn.classList.add('active');
   renderWeather(n,src);
   renderTimeline(n,src);
 }
@@ -773,13 +784,25 @@ function findClosest(times,target){
   return best;
 }
 
+function findWorkingSource(n,cp,preferredSrc){
+  const data=weatherData[n];
+  if(!data)return preferredSrc;
+  const sources=sourceOrder(cp);
+  if(data[preferredSrc]&&!data[preferredSrc].error)return preferredSrc;
+  for(const src of sources){
+    if(data[src]&&!data[src].error)return src;
+  }
+  return preferredSrc;
+}
+
 // ── Render meteo ─────────────────────────────────────────────────────────────
 function renderWeather(n,src){
   const el=document.getElementById('wx'+n);
   const cp=CPS[n-1];
-  const refTime=cp.arr||cp.dep;
   const data=weatherData[n];
   if(!data){el.innerHTML='<div class="wx-loading"><div class="spinner"></div><br>Caricamento...</div>';return}
+  src=findWorkingSource(n,cp,src);
+  const refTime=cp.arr||cp.dep;
   const srcData=data[src];
   if(!srcData||srcData.error){el.innerHTML=`<div class="wx-error">⚠️ ${srcData?srcData.error:'Non disponibile'}</div>`;return}
   const idx=findClosest(srcData.times,refTime);
@@ -815,6 +838,7 @@ function renderTimeline(n,src){
   if(!cp.arr||!cp.dep){el.innerHTML='';return}
   const data=weatherData[n];
   if(!data){el.innerHTML='';return}
+  src=findWorkingSource(n,cp,src);
   const srcData=data[src];
   if(!srcData||srcData.error){el.innerHTML='';return}
   const startH=new Date(cp.arr).getTime();
@@ -1174,12 +1198,7 @@ function onLanguageChange(lang) {
 }
 
 function computeOriginalSpeed(segIdx) {
-  const from = ORIG_CPS[segIdx];
-  const to   = ORIG_CPS[segIdx + 1];
-  if (!from.dep || !to.arr) return DEFAULT_SPEEDS[segIdx] || 15.0;
-  const travelH = (new Date(to.arr) - new Date(from.dep)) / 3600000;
-  if (travelH <= 0) return DEFAULT_SPEEDS[segIdx] || 15.0;
-  return Math.round((to.kms / travelH) * 10) / 10;
+  return DEFAULT_SPEEDS[segIdx] || 15.0;
 }
 
 function onSpeedInput(i) {
@@ -1201,20 +1220,23 @@ function formatDuration(seconds) {
 
 // ── Ricalcolo orari ──────────────────────────────────────────────────────────
 function recalcTimes() {
-  // Start da Umeå fisso alle 23:30 per il primo checkpoint
+  CPS.forEach(cp => {
+    cp.arr = null;
+    cp.dep = null;
+  });
   CPS[0].dep = START_DEP;
-  CPS[0].arr = ORIG_CPS[0].arr;
   for (let i = 0; i < CPS.length - 1; i++) {
     const from   = CPS[i];
     const to     = CPS[i + 1];
-    const distKm = ORIG_CPS[i + 1].kms;
-    const speed  = speedOverrides[i] !== undefined ? speedOverrides[i] : (DEFAULT_SPEEDS[i] || computeOriginalSpeed(i));
+    const distKm = to.kms;
+    const speed  = speedOverrides[i] !== undefined ? speedOverrides[i] : computeOriginalSpeed(i);
     if (!from.dep || distKm <= 0 || speed <= 0) {
-      to.arr = ORIG_CPS[i + 1].arr;
-      to.dep = ORIG_CPS[i + 1].dep;
+      to.arr = null;
+      to.dep = null;
       continue;
     }
-    const newArr = new Date(new Date(from.dep).getTime() + (distKm / speed) * 3600000);
+    const travelMs = (distKm / speed) * 3600000;
+    const newArr = new Date(new Date(from.dep).getTime() + travelMs);
     to.arr = newArr.toISOString().slice(0, 19);
     if (i + 1 === CPS.length - 1) {
       to.dep = null;
@@ -1251,9 +1273,9 @@ function resetSettings() {
   speedOverrides  = {};
   stopOverrides   = {};
   ORIG_CPS.forEach((orig, idx) => {
-    CPS[idx].arr = orig.arr;
-    CPS[idx].dep = orig.dep;
     CPS[idx].stopMinutes = orig.stopMinutes || 0;
+    CPS[idx].arr = null;
+    CPS[idx].dep = null;
   });
   applyFontSize(currentFontSize);
   recalcTimes();
