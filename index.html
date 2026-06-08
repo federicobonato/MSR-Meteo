@@ -1741,18 +1741,22 @@ async function loadAll(){
     const batch=CPS.slice(i,i+3);
     const results=await Promise.all(batch.map(cp=>fetchAllForCP(cp)));
     batch.forEach((cp,j)=>{
-      weatherData[cp.n]=results[j];loadedCount++;updateProgress();
+      weatherData[cp.n]=results[j];
+      loadedCount++;
+      updateProgress();
       const card=document.getElementById('card'+cp.n);
-      card.classList.remove('loading');
+      if(card) card.classList.remove('loading');
       const d=results[j];
-      const hasData=(d.yr&&!d.yr.error)||(d.smhi&&!d.smhi.error)||(d.ecmwf&&!d.ecmwf.error);
-      card.classList.add(hasData?'loaded':'error');
-      if(card.classList.contains('open')){renderWeather(cp.n);renderTimeline(cp.n)}
+      const hasData = !(d.ecmwf && d.ecmwf.error) && !(d.forecast && d.forecast.error) && !(d.yr && d.yr.error) ? true : (!d.ecmwf||!d.forecast||!d.yr ? true : false);
+      if(card) card.classList.add(hasData?'loaded':'error');
+      if(card && card.classList.contains('open')){renderWeather(cp.n,'ecmwf');renderTimeline(cp.n,'ecmwf')}
     });
     renderCharts();
   }
-  setCache(weatherData);generateAlerts();
-  document.getElementById('updateInfo').textContent=t('updated')+new Date().toLocaleTimeString()+t('updatedSub');
+  setCache(weatherData);
+  generateAlerts();
+  const uiUpdate = document.getElementById('updateInfo');
+  if (uiUpdate) uiUpdate.textContent = t('updatedInfo') + new Date().toLocaleTimeString(LOCALE_MAP[currentLang]||'it-IT');
 }
 
 function refreshAll(){
