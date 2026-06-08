@@ -172,7 +172,8 @@ function formatDuration(seconds) {
 
 // ── Ricalcolo orari ──────────────────────────────────────────────────────────
 function recalcTimes() {
-  CPS[0].dep = ORIG_CPS[0].dep;
+  // Start da Umeå fisso alle 23:30 per il primo checkpoint
+  CPS[0].dep = START_DEP;
   CPS[0].arr = ORIG_CPS[0].arr;
   for (let i = 0; i < CPS.length - 1; i++) {
     const from   = CPS[i];
