@@ -135,6 +135,14 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .summary-bar .sb-item{text-align:center}
 .summary-bar .sb-val{font-size:1.1429em;font-weight:700;color:var(--sun,#f0943d)}
 
+.map-thumb-wrap{background:rgba(27,40,56,.85);margin:8px;border-radius:var(--rad);border:1px solid rgba(255,255,255,.08);padding:12px}
+.map-thumb-title{font-size:0.9286em;font-weight:700;color:var(--hl);margin-bottom:8px}
+#miniMap{width:100%;height:180px;border-radius:14px;background:linear-gradient(135deg,rgba(10,22,38,.95),rgba(18,34,59,.95));display:block}
+
+.language-row{display:flex;flex-wrap:wrap;gap:8px}
+.language-option{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:8px 10px;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:0.8571em;color:var(--text);flex:1;min-width:120px}
+.language-option input{accent-color:var(--hl)}
+
 /* ── Legenda ── */
 .legend{background:var(--card);margin:16px 8px;padding:14px;border-radius:var(--rad);border:1px solid rgba(255,255,255,.05)}
 .legend h3{font-size:0.9286em;margin-bottom:8px;color:var(--hl)}
@@ -207,13 +215,18 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 <!-- ── Header ── -->
 <div class="header">
   <h1>🌅 <span>MSR 2026</span> Meteo
-    <div class="sub">Midnight Sun Randonnée · Umeå ↔ Arctic Circle · 1215 km</div>
+    <div class="sub" id="appSubtitle">Midnight Sun Randonnée · Umeå ↔ Arctic Circle · 1215 km</div>
   </h1>
   <button class="btn-settings" id="btnSettings" onclick="openSettings()">⚙️ Impostazioni</button>
   <button class="btn-refresh" onclick="refreshAll()">🔄 Aggiorna</button>
 </div>
 <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
 <div class="update-info" id="updateInfo">Caricamento in corso...</div>
+
+<div class="map-thumb-wrap">
+  <div class="map-thumb-title" id="miniMapTitle">🗺️ Mini mappa checkpoint</div>
+  <canvas id="miniMap" width="800" height="180"></canvas>
+</div>
 
 <!-- ── Summary bar ── -->
 <div class="summary-bar">
@@ -323,12 +336,25 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
       </div>
     </div>
     <div class="settings-section">
-      <div class="settings-section-title">🚴 Velocità media per tappa (km/h)</div>
+      <div class="settings-section-title" id="speedSectionTitle">🚴 Velocità media per tappa (km/h)</div>
       <div class="speed-grid" id="speedGrid"></div>
     </div>
     <div class="settings-section">
-      <button class="settings-apply-btn" onclick="applySettings()">✅ Applica e ricalcola orari</button>
-      <button class="settings-reset-btn" onclick="resetSettings()">↩ Ripristina valori originali</button>
+      <div class="settings-section-title" id="stopSectionTitle">⏱️ Tempi di sosta checkpoint</div>
+      <div class="speed-grid" id="stopGrid"></div>
+    </div>
+    <div class="settings-section">
+      <div class="settings-section-title" id="languageSectionTitle">🌍 Lingua</div>
+      <div class="language-row">
+        <label class="language-option"><input type="radio" name="lang" value="it" onchange="onLanguageChange('it')"> Italiano</label>
+        <label class="language-option"><input type="radio" name="lang" value="en" onchange="onLanguageChange('en')"> English</label>
+        <label class="language-option"><input type="radio" name="lang" value="de" onchange="onLanguageChange('de')"> Deutsch</label>
+        <label class="language-option"><input type="radio" name="lang" value="fr" onchange="onLanguageChange('fr')"> Français</label>
+      </div>
+    </div>
+    <div class="settings-section">
+      <button class="settings-apply-btn" id="applySettingsBtn" onclick="applySettings()">✅ Applica e ricalcola orari</button>
+      <button class="settings-reset-btn" id="resetSettingsBtn" onclick="resetSettings()">↩ Ripristina valori originali</button>
     </div>
   </div>
 </div>
@@ -343,38 +369,27 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 // Velocità media di default per ogni tappa (km/h)
 // Indice 0 = CP1→CP2, indice 1 = CP2→CP3, ecc.
 const DEFAULT_SPEEDS = [
-  25.0,  // CP1  → CP2  (Umeå → Vindeln, 123 km)
-  25.0,  // CP2  → CP3  (Vindeln → Åsele, 118 km) — terreno pianeggiante
-  25.0,  // CP3  → CP4  (Åsele → Vilhelmina, 118 km)
-  25.0,  // CP4  → CP5  (Vilhelmina → Kittelfjäll, 129 km)
-  25.0,  // CP5  → CP6  (Kittelfjäll → Hattfjelldal, 99 km) — tratto montano
-  25.0,  // CP6  → CP7  (Hattfjelldal → Mo i Rana, 112 km)
-  25.0,  // CP7  → CP8  (Mo i Rana → Arctic Circle, 81 km) — salita
-  25.0,  // CP8  → CP9  (Arctic Circle → Vuoggatjålme, 93 km) — tratto alpino
-  25.0,  // CP9  → CP10 (Vuoggatjålme → Arjeplog, 105 km)
-  25.0,  // CP10 → CP11 (Arjeplog → Sorsele, 91 km)
-  25.0,  // CP11 → CP12 (Sorsele → Åmsele, 157 km) — tappa lunga
-  25.0,  // CP12 → CP13 (Åmsele → Umeå, 107 km) — arrivo
+  25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25,
 ];
 
 // Checkpoint della gara
 // Campi: n=numero, name=nome, cc=nazione (SE/NO), lat/lon=coordinate,
 //        km=km progressivi, kms=km tappa, elev=dislivello tappa,
-//        arr=orario arrivo previsto, dep=orario partenza previsto
+//        arr=orario arrivo previsto, dep=orario partenza previsto, stopMinutes=sosta in minuti
 const CPS = [
-  {n:1, name:"Scandic Plaza Umeå",            cc:"SE", lat:63.826, lon:20.263, km:0,    kms:0,   elev:0,    arr:"2026-06-14T16:00:00", dep:"2026-06-14T16:00:00"},
-  {n:2, name:"Vindeln – Pensionat Forsen",    cc:"SE", lat:64.204, lon:19.719, km:123,  kms:123, elev:1139, arr:"2026-06-14T24:02:00", dep:"2026-06-15T01:02:00"},
-  {n:3, name:"Åsele – Åsele Hotell",          cc:"SE", lat:64.158, lon:17.334, km:241,  kms:118, elev:1127, arr:"2026-06-15T07:54:00", dep:"2026-06-15T08:54:00"},
-  {n:4, name:"Vilhelmina – Hotel Wilhelmina", cc:"SE", lat:64.624, lon:16.656, km:359,  kms:118, elev:2087, arr:"2026-06-15T16:42:00", dep:"2026-06-15T17:42:00"},
-  {n:5, name:"Kittelfjäll – Fjälltorget",    cc:"SE", lat:65.178, lon:15.003, km:488,  kms:129, elev:1658, arr:"2026-06-15T25:42:00", dep:"2026-06-16T01:42:00"},
-  {n:6, name:"Hattfjelldal – Hattfjelldal Hotel", cc:"NO", lat:65.571, lon:13.981, km:587, kms:99, elev:1049, arr:"2026-06-16T08:30:00", dep:"2026-06-16T09:30:00"},
-  {n:7, name:"Mo i Rana – Hotel Scandia",     cc:"NO", lat:66.313, lon:14.143, km:699,  kms:112, elev:1454, arr:"2026-06-16T17:24:00", dep:"2026-06-16T18:24:00"},
-  {n:8, name:"Arctic Circle – Polarsirkelsenteret", cc:"NO", lat:66.564, lon:15.314, km:780, kms:81, elev:1468, arr:"2026-06-16T24:16:00", dep:"2026-06-17T02:16:00"},
-  {n:9, name:"Vuoggatjålme – Campo",          cc:"SE", lat:66.567, lon:16.350, km:873,  kms:93,  elev:1270, arr:"2026-06-17T09:25:00", dep:"2026-06-17T13:25:00"},
-  {n:10,name:"Arjeplog – Hornavan Hotel",     cc:"SE", lat:66.052, lon:17.889, km:978,  kms:105, elev:912,  arr:"2026-06-17T20:31:00", dep:"2026-06-17T21:31:00"},
-  {n:11,name:"Sorsele – Sorsele River Hotel", cc:"SE", lat:65.532, lon:17.534, km:1069, kms:91,  elev:741,  arr:"2026-06-18T03:23:00", dep:"2026-06-18T04:23:00"},
-  {n:12,name:"Åmsele – Campeggio",            cc:"SE", lat:64.520, lon:18.412, km:1226, kms:157, elev:1324, arr:"2026-06-18T15:38:00", dep:"2026-06-18T19:38:00"},
-  {n:13,name:"Scandic Plaza Umeå",            cc:"SE", lat:63.826, lon:20.263, km:1333, kms:107, elev:1025, arr:"2026-06-19T02:49:00", dep:null}
+  {n:1, name:"Scandic Plaza Umeå",            cc:"SE", lat:63.826, lon:20.263, km:0,    kms:0,   elev:0,    arr:"2026-06-14T16:00:00", dep:"2026-06-14T16:00:00", stopMinutes:0},
+  {n:2, name:"Granö – Granö Beckasin",        cc:"SE", lat:64.204, lon:19.719, km:123,  kms:123, elev:1139, arr:"2026-06-14T24:02:00", dep:"2026-06-15T01:02:00", stopMinutes:30},
+  {n:3, name:"Lycksele – Hotel Lappland",      cc:"SE", lat:64.158, lon:17.334, km:241,  kms:118, elev:1127, arr:"2026-06-15T07:54:00", dep:"2026-06-15T08:54:00", stopMinutes:30},
+  {n:4, name:"Vilhelmina – Hotel Wilhelmina", cc:"SE", lat:64.624, lon:16.656, km:359,  kms:118, elev:2087, arr:"2026-06-15T16:42:00", dep:"2026-06-15T17:42:00", stopMinutes:60},
+  {n:5, name:"Kittelfjäll – Fjälltorget",    cc:"SE", lat:65.178, lon:15.003, km:488,  kms:129, elev:1658, arr:"2026-06-15T25:42:00", dep:"2026-06-16T01:42:00", stopMinutes:60},
+  {n:6, name:"Hattfjelldal – Hattfjelldal Hotel", cc:"NO", lat:65.571, lon:13.981, km:587, kms:99, elev:1049, arr:"2026-06-16T08:30:00", dep:"2026-06-16T09:30:00", stopMinutes:240},
+  {n:7, name:"Mo i Rana – Hotel Scandia",     cc:"NO", lat:66.313, lon:14.143, km:699,  kms:112, elev:1454, arr:"2026-06-16T17:24:00", dep:"2026-06-16T18:24:00", stopMinutes:60},
+  {n:8, name:"Arctic Circle – Polarsirkelsenteret", cc:"NO", lat:66.564, lon:15.314, km:780, kms:81, elev:1468, arr:"2026-06-16T24:16:00", dep:"2026-06-17T02:16:00", stopMinutes:60},
+  {n:9, name:"Vuoggatjålme – Campo",          cc:"SE", lat:66.567, lon:16.350, km:873,  kms:93,  elev:1270, arr:"2026-06-17T09:25:00", dep:"2026-06-17T13:25:00", stopMinutes:300},
+  {n:10,name:"Arjeplog – Hornavan Hotel",     cc:"SE", lat:66.052, lon:17.889, km:978,  kms:105, elev:912,  arr:"2026-06-17T20:31:00", dep:"2026-06-17T21:31:00", stopMinutes:60},
+  {n:11,name:"Sorsele – Sorsele River Hotel", cc:"SE", lat:65.532, lon:17.534, km:1069, kms:91,  elev:741,  arr:"2026-06-18T03:23:00", dep:"2026-06-18T04:23:00", stopMinutes:60},
+  {n:12,name:"Åmsele – Campeggio",            cc:"SE", lat:64.520, lon:18.412, km:1226, kms:157, elev:1324, arr:"2026-06-18T15:38:00", dep:"2026-06-18T19:38:00", stopMinutes:240},
+  {n:13,name:"Scandic Plaza Umeå",            cc:"SE", lat:63.826, lon:20.263, km:1333, kms:107, elev:1025, arr:"2026-06-19T02:49:00", dep:null, stopMinutes:0}
 ];
 
 // Soglie allerta meteo
@@ -407,11 +422,197 @@ const CACHE_KEY = 'msr_meteo_v4';
 const WMO_ICONS={0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌦️',56:'🌧️❄️',57:'🌧️❄️',61:'🌧️',63:'🌧️',65:'🌧️🌧️',66:'🌧️❄️',67:'🌧️❄️',71:'🌨️',73:'🌨️',75:'🌨️🌨️',77:'🌨️',80:'🌦️',81:'🌧️',82:'⛈️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️'};
 const WMO_DESC={0:'Sereno',1:'Prev. sereno',2:'Parz. nuvoloso',3:'Coperto',45:'Nebbia',48:'Nebbia gelata',51:'Pioviggine legg.',53:'Pioviggine',55:'Pioviggine intensa',56:'Piovig. gelata',57:'Piovig. gelata int.',61:'Pioggia legg.',63:'Pioggia moderata',65:'Pioggia intensa',66:'Pioggia gelata',67:'Pioggia gelata int.',71:'Neve legg.',73:'Neve moderata',75:'Neve intensa',77:'Granelli neve',80:'Rovesci legg.',81:'Rovesci',82:'Rovesci violenti',85:'Neve legg.',86:'Neve intensa',95:'Temporale',96:'Temporale grandine',99:'Temporale grand.'};
 
+const LANG_MAP = {
+  it: {
+    title: '🌅 MSR 2026 — Meteo Gara · Midnight Sun Randonnée',
+    headerSub: 'Midnight Sun Randonnée · Umeå ↔ Arctic Circle · 1215 km',
+    btnSettings: '⚙️ Impostazioni',
+    btnRefresh: '🔄 Aggiorna',
+    alertsTitle: '⚠️ Allerta Meteo',
+    chartsTitle: '📊 Grafici Percorso',
+    chartTempTitle: '🌡️ Temperatura lungo il percorso (°C)',
+    chartPrecWindTitle: '🌧️ Precipitazioni (mm/h) e 💨 Vento (km/h)',
+    fontSectionTitle: '🔠 Dimensione testo',
+    fontLabel: 'Carattere',
+    speedSectionTitle: '🚴 Velocità media per tappa (km/h)',
+    stopSectionTitle: '⏱️ Tempi di sosta checkpoint',
+    languageSectionTitle: '🌍 Lingua',
+    applyBtn: '✅ Applica e ricalcola orari',
+    resetBtn: '↩ Ripristina valori originali',
+    mapTitle: '🗺️ Mini mappa checkpoint',
+    loadingText: 'Caricamento in corso...',
+    cachedInfo: '✅ Dati dalla cache —',
+    updatedInfo: '✅ Aggiornato: ',
+    cacheText: '✅ Dati dalla cache —',
+    refreshText: '🔄 Aggiornamento in corso...',
+    analysisText: 'Analisi in corso...',
+    dataFor: '📍 Dati per:',
+    arrivalLabel: '🏁 Arrivo:',
+    departureLabel: '🚀 Partenza:',
+    noData: '⚠️ Nessun dato per questo orario',
+    perceived: '🌡️ Percepita',
+    precipitation: '💧 Precipitazioni',
+    wind: '💨 Vento',
+    cloud: '☁️ Copertura',
+    humidity: '💦 Umidità',
+    stopLabelShort: 'sosta',
+    startMeta: 'PARTENZA',
+    finishMeta: 'ARRIVO',
+    mapLegend: 'Norvegia: yr.no • Svezia: SMHI'
+  },
+  en: {
+    title: '🌅 MSR 2026 — Race Weather · Midnight Sun Randonnée',
+    headerSub: 'Midnight Sun Randonnée · Umeå ↔ Arctic Circle · 1215 km',
+    btnSettings: '⚙️ Settings',
+    btnRefresh: '🔄 Refresh',
+    alertsTitle: '⚠️ Weather Alerts',
+    chartsTitle: '📊 Route Charts',
+    chartTempTitle: '🌡️ Route Temperature (°C)',
+    chartPrecWindTitle: '🌧️ Precipitation (mm/h) and 💨 Wind (km/h)',
+    fontSectionTitle: '🔠 Text Size',
+    fontLabel: 'Font',
+    speedSectionTitle: '🚴 Average speed per stage (km/h)',
+    stopSectionTitle: '⏱️ Checkpoint stop time',
+    languageSectionTitle: '🌍 Language',
+    applyBtn: '✅ Apply and recalc times',
+    resetBtn: '↩ Reset defaults',
+    mapTitle: '🗺️ Checkpoint mini map',
+    loadingText: 'Loading...',
+    cachedInfo: '✅ Cache data —',
+    updatedInfo: '✅ Updated: ',
+    cacheText: '✅ Cache data —',
+    refreshText: '🔄 Refreshing...',
+    analysisText: 'Analysis in progress...',
+    dataFor: '📍 Data for:',
+    arrivalLabel: '🏁 Arrival:',
+    departureLabel: '🚀 Departure:',
+    noData: '⚠️ No data for this time',
+    perceived: '🌡️ Feels like',
+    precipitation: '💧 Precipitation',
+    wind: '💨 Wind',
+    cloud: '☁️ Cloud cover',
+    humidity: '💦 Humidity',
+    stopLabelShort: 'stop',
+    startMeta: 'START',
+    finishMeta: 'FINISH',
+    mapLegend: 'Norway: yr.no • Sweden: SMHI'
+  },
+  de: {
+    title: '🌅 MSR 2026 — Rennwetter · Midnight Sun Randonnée',
+    headerSub: 'Midnight Sun Randonnée · Umeå ↔ Arctic Circle · 1215 km',
+    btnSettings: '⚙️ Einstellungen',
+    btnRefresh: '🔄 Aktualisieren',
+    alertsTitle: '⚠️ Wetterwarnungen',
+    chartsTitle: '📊 Streckendiagramme',
+    chartTempTitle: '🌡️ Temperatur entlang der Strecke (°C)',
+    chartPrecWindTitle: '🌧️ Niederschlag (mm/h) und 💨 Wind (km/h)',
+    fontSectionTitle: '🔠 Textgröße',
+    fontLabel: 'Schrift',
+    speedSectionTitle: '🚴 Durchschnittsgeschwindigkeit je Etappe (km/h)',
+    stopSectionTitle: '⏱️ Stoppzeiten an Checkpoints',
+    languageSectionTitle: '🌍 Sprache',
+    applyBtn: '✅ Anwenden und Zeiten neu berechnen',
+    resetBtn: '↩ Auf Standard zurücksetzen',
+    mapTitle: '🗺️ Checkpoint Mini-Karte',
+    loadingText: 'Lädt...',
+    cachedInfo: '✅ Daten aus dem Cache —',
+    updatedInfo: '✅ Aktualisiert: ',
+    cacheText: '✅ Daten aus dem Cache —',
+    refreshText: '🔄 Aktualisierung läuft...',
+    analysisText: 'Analyse läuft...',
+    dataFor: '📍 Daten für:',
+    arrivalLabel: '🏁 Ankunft:',
+    departureLabel: '🚀 Abfahrt:',
+    noData: '⚠️ Keine Daten für diese Zeit',
+    perceived: '🌡️ Gefühlt',
+    precipitation: '💧 Niederschlag',
+    wind: '💨 Wind',
+    cloud: '☁️ Bewölkung',
+    humidity: '💦 Luftfeuchtigkeit',
+    stopLabelShort: 'Stopp',
+    startMeta: 'START',
+    finishMeta: 'ZIEL',
+    mapLegend: 'Norwegen: yr.no • Schweden: SMHI'
+  },
+  fr: {
+    title: '🌅 MSR 2026 — Météo de course · Midnight Sun Randonnée',
+    headerSub: 'Midnight Sun Randonnée · Umeå ↔ Arctic Circle · 1215 km',
+    btnSettings: '⚙️ Paramètres',
+    btnRefresh: '🔄 Actualiser',
+    alertsTitle: '⚠️ Alertes météo',
+    chartsTitle: '📊 Graphiques du parcours',
+    chartTempTitle: '🌡️ Température sur le parcours (°C)',
+    chartPrecWindTitle: '🌧️ Précipitations (mm/h) et 💨 Vent (km/h)',
+    fontSectionTitle: '🔠 Taille du texte',
+    fontLabel: 'Police',
+    speedSectionTitle: '🚴 Vitesse moyenne par étape (km/h)',
+    stopSectionTitle: '⏱️ Durée de pause aux checkpoints',
+    languageSectionTitle: '🌍 Langue',
+    applyBtn: '✅ Appliquer et recalculer',
+    resetBtn: '↩ Rétablir les valeurs',
+    mapTitle: '🗺️ Mini carte des checkpoints',
+    loadingText: 'Chargement...',
+    cachedInfo: '✅ Données du cache —',
+    updatedInfo: '✅ Mis à jour: ',
+    cacheText: '✅ Données du cache —',
+    refreshText: '🔄 Actualisation en cours...',
+    analysisText: 'Analyse en cours...',
+    dataFor: '📍 Données pour:',
+    arrivalLabel: '🏁 Arrivée:',
+    departureLabel: '🚀 Départ:',
+    noData: '⚠️ Pas de données pour cet horaire',
+    perceived: '🌡️ Ressenti',
+    precipitation: '💧 Précipitations',
+    wind: '💨 Vent',
+    cloud: '☁️ Couverture nuageuse',
+    humidity: '💦 Humidité',
+    stopLabelShort: 'pause',
+    startMeta: 'DÉPART',
+    finishMeta: 'ARRIVÉE',
+    mapLegend: 'Norvège: yr.no • Suède: SMHI'
+  }
+};
+const LOCALE_MAP = {it:'it-IT',en:'en-US',de:'de-DE',fr:'fr-FR'};
+let currentLang = 'it';
+function t(key){return (LANG_MAP[currentLang] && LANG_MAP[currentLang][key]) || LANG_MAP.it[key] || key;}
+function applyLanguage() {
+  document.documentElement.lang = currentLang;
+  document.title = t('title');
+  document.getElementById('btnSettings').textContent = t('btnSettings');
+  document.getElementById('btnSettings').setAttribute('aria-label', t('btnSettings'));
+  const refreshButton = document.getElementById('btnRefresh');
+  if (refreshButton) refreshButton.textContent = t('btnRefresh');
+  const subtitle = document.getElementById('appSubtitle');
+  if (subtitle) subtitle.textContent = t('headerSub');
+  const miniMapTitle = document.getElementById('miniMapTitle');
+  if (miniMapTitle) miniMapTitle.textContent = t('mapTitle');
+  const settingsHeader = document.querySelector('#settingsOverlay .settings-header h2');
+  if (settingsHeader) settingsHeader.textContent = t('btnSettings');
+  document.querySelector('.section#alertsSection .section-head h2').textContent = t('alertsTitle');
+  document.querySelector('.section#chartsSection .section-head h2').textContent = t('chartsTitle');
+  document.getElementById('speedSectionTitle').textContent = t('speedSectionTitle');
+  document.getElementById('stopSectionTitle').textContent = t('stopSectionTitle');
+  document.getElementById('languageSectionTitle').textContent = t('languageSectionTitle');
+  document.getElementById('applySettingsBtn').textContent = t('applyBtn');
+  document.getElementById('resetSettingsBtn').textContent = t('resetBtn');
+  const fontLabel = document.querySelector('.font-size-label');
+  if (fontLabel) fontLabel.textContent = t('fontLabel');
+  const updateInfo = document.getElementById('updateInfo');
+  if (updateInfo && updateInfo.textContent.includes('✅')) {
+    updateInfo.textContent = t('updatedInfo') + new Date().toLocaleTimeString(LOCALE_MAP[currentLang]);
+  } else if (updateInfo) {
+    updateInfo.textContent = t('loadingText');
+  }
+  buildCards();
+}
+
 function flag(cc){return cc==='SE'?'🇸🇪':'🇳🇴'}
+function sourceOrder(cp){if(cp.cc==='SE')return['smhi','yr','ecmwf','forecast'];if(cp.cc==='NO')return['yr','ecmwf','forecast'];return['ecmwf','forecast','yr','smhi']}
+function sourceLabel(src){return{ecmwf:'ECMWF',forecast:'Forecast',yr:'yr.no',smhi:'SMHI'}[src]||src}
 function tempColor(t){if(t<5)return'temp-blue';if(t<10)return'temp-cyan';if(t<15)return'temp-green';if(t<20)return'temp-yellow';if(t<25)return'temp-orange';return'temp-red'}
 function tempHex(t){if(t<5)return'#60a5fa';if(t<10)return'#22d3ee';if(t<15)return'#4ade80';if(t<20)return'#facc15';if(t<25)return'#fb923c';return'#ef4444'}
 function windArrow(deg){if(deg==null)return'';const a=['⬇️','↙️','⬅️','↖️','⬆️','↗️','➡️','↘️'];return a[Math.round(deg/45)%8]}
-function fmtTime(iso){if(!iso)return'-';const d=new Date(iso);return d.toLocaleString('it-IT',{weekday:'short',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}
+function fmtTime(iso){if(!iso)return'-';const d=new Date(iso);return d.toLocaleString(LOCALE_MAP[currentLang]||'it-IT',{weekday:'short',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}
 function fmtHour(iso){if(!iso)return'-';const d=new Date(iso);return('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)}
 function isNight(iso){if(!iso)return false;const h=new Date(iso).getHours();return h>=22||h<6}
 
@@ -429,15 +630,17 @@ function buildCards(){
   container.innerHTML='';
   CPS.forEach(cp=>{
     const numClass=cp.n===1?'start':cp.n===CPS.length?'finish':'';
-    const hasSMHI=cp.cc==='SE';
     const isNR=isNight(cp.arr)||isNight(cp.dep);
+    const sources=sourceOrder(cp);
+    const activeSrc=sources.find(src=>src!=='smhi'||cp.cc==='SE')||'ecmwf';
+    const stopLabel=cp.stopMinutes?` · ${cp.stopMinutes} ${t('stopLabelShort')}`:'';
     container.innerHTML+=`
 <div class="card" id="card${cp.n}" onclick="toggleCard(${cp.n},event)">
 <div class="card-head">
 <div class="cp-num ${numClass}">${cp.n}</div>
 <div class="cp-info">
 <div class="cp-name">${cp.name}</div>
-<div class="cp-meta">${cp.km} km · +${cp.elev}m D+ · ${cp.kms>0?cp.kms+' km tappa':cp.n===1?'PARTENZA':'ARRIVO'}</div>
+<div class="cp-meta">${cp.km} km · +${cp.elev}m D+ · ${cp.kms>0?cp.kms+' km tappa':cp.n===1?t('startMeta'):t('finishMeta')}${stopLabel}</div>
 <div class="cp-badges" id="badges${cp.n}">
 ${isNR?'<span class="badge badge-night">🌙 Notturno</span>':''}
 </div>
@@ -447,25 +650,81 @@ ${isNR?'<span class="badge badge-night">🌙 Notturno</span>':''}
 </div>
 <div class="card-body" onclick="event.stopPropagation()">
 <div class="times-row">
-${cp.arr?`<div class="time-badge"><span class="lbl">🏁 Arrivo:</span> ${fmtTime(cp.arr)}</div>`:''}
-${cp.dep?`<div class="time-badge"><span class="lbl">🚀 Partenza:</span> ${fmtTime(cp.dep)}</div>`:''}
+${cp.arr?`<div class="time-badge"><span class="lbl">${t('arrivalLabel')}</span> ${fmtTime(cp.arr)}</div>`:''}
+${cp.dep?`<div class="time-badge"><span class="lbl">${t('departureLabel')}</span> ${fmtTime(cp.dep)}</div>`:''}
 </div>
 <div class="source-tabs" id="tabs${cp.n}">
-<button class="src-tab active" onclick="switchSrc(${cp.n},'ecmwf',this)">ECMWF</button>
-<button class="src-tab" onclick="switchSrc(${cp.n},'forecast',this)">Forecast</button>
-<button class="src-tab" onclick="switchSrc(${cp.n},'yr',this)">yr.no</button>
-<button class="src-tab" ${hasSMHI?'':'disabled'} onclick="switchSrc(${cp.n},'smhi',this)" ${hasSMHI?'':'title="Solo 🇸🇪"'}>SMHI</button>
+${sources.map(src=>`<button class="src-tab ${src===activeSrc?'active':''}" data-src="${src}" ${src==='smhi'&&cp.cc!=='SE'?'disabled':''} onclick="switchSrc(${cp.n},'${src}',this)" ${src==='smhi'&&cp.cc!=='SE'?'title="Solo 🇸🇪"':''}>${sourceLabel(src)}</button>`).join('')}
 </div>
-<div class="weather-display" id="wx${cp.n}"><div class="wx-loading"><div class="spinner"></div><br>Caricamento...</div></div>
+<div class="weather-display" id="wx${cp.n}"><div class="wx-loading"><div class="spinner"></div><br>${t('loadingText')}</div></div>
 <div id="timeline${cp.n}" class="timeline"></div>
 <div class="links-row">
 <a href="https://www.yr.no/en/forecast/daily-table/${cp.lat},${cp.lon}" target="_blank" rel="noopener">🔗 yr.no</a>
-${hasSMHI?'<a href="https://www.smhi.se/vader/prognoser" target="_blank" rel="noopener">🔗 SMHI</a>':''}
+${cp.cc==='SE'?'<a href="https://www.smhi.se/en/weather/forecast" target="_blank" rel="noopener">🔗 SMHI</a>':''}
 <a href="https://open-meteo.com/en/docs/ecmwf-api#latitude=${cp.lat}&longitude=${cp.lon}" target="_blank" rel="noopener">🔗 Open-Meteo</a>
 </div>
 </div>
 </div>`;
   });
+  drawMiniMap();
+}
+
+function drawMiniMap() {
+  const canvas = document.getElementById('miniMap');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const W = rect.width;
+  const H = rect.height;
+  const pad = 18;
+  const lats = CPS.map(cp => cp.lat);
+  const lons = CPS.map(cp => cp.lon);
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+  const minLon = Math.min(...lons);
+  const maxLon = Math.max(...lons);
+  const plotW = W - pad * 2;
+  const plotH = H - pad * 2;
+  const points = CPS.map(cp => {
+    const x = pad + (cp.lon - minLon) / ((maxLon - minLon) || 1) * plotW;
+    const y = pad + (1 - (cp.lat - minLat) / ((maxLat - minLat) || 1)) * plotH;
+    return {x, y, cp};
+  });
+  ctx.clearRect(0, 0, W, H);
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#122238');
+  bg.addColorStop(1, '#08101f');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(255,255,255,.08)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(pad - 4, pad - 4, plotW + 8, plotH + 8);
+  ctx.strokeStyle = 'rgba(232,135,42,.65)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  points.forEach((p, idx) => {
+    if (idx === 0) ctx.moveTo(p.x, p.y);
+    else ctx.lineTo(p.x, p.y);
+  });
+  ctx.stroke();
+  points.forEach(p => {
+    ctx.beginPath();
+    ctx.fillStyle = p.cp.n === 1 ? '#4ecca3' : p.cp.n === CPS.length ? '#f5c542' : '#e8872a';
+    ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('CP' + p.cp.n, p.x, p.y - 10);
+  });
+  ctx.fillStyle = '#8899aa';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(t('mapLegend'), pad, H - 8);
 }
 
 function toggleCard(n,e){
@@ -473,8 +732,10 @@ function toggleCard(n,e){
   const card=document.getElementById('card'+n);
   card.classList.toggle('open');
   if(card.classList.contains('open')&&weatherData[n]){
-    renderWeather(n,'ecmwf');
-    renderTimeline(n,'ecmwf');
+    const activeBtn=document.querySelector('#tabs'+n+' .src-tab.active');
+    const src=activeBtn?activeBtn.dataset.src:'ecmwf';
+    renderWeather(n,src);
+    renderTimeline(n,src);
   }
 }
 
@@ -690,7 +951,7 @@ function symbolToWmo(sym){if(!sym)return null;const s=sym.replace(/_day|_night|_
 
 async function fetchSMHI(cp){
   if(cp.cc!=='SE')return{error:'Solo località svedesi'};
-  const url=`https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${cp.lon.toFixed(3)}/lat/${cp.lat.toFixed(3)}/data.json`;
+  const url=`https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${cp.lon.toFixed(4)}/lat/${cp.lat.toFixed(4)}/data.json`;
   try{const r=await fetch(url);if(!r.ok)return{error:'HTTP '+r.status};const j=await r.json();
   const ts=j.timeSeries;const times=[],temperature=[],precipitation=[],weather_code=[],cloud_cover=[],wind_speed=[],wind_dir=[],wind_gust=[],humidity=[];
   ts.forEach(t=>{const utc=new Date(t.validTime);const local=new Date(utc.getTime()+2*3600000);times.push(local.toISOString().slice(0,16));const p={};t.parameters.forEach(pr=>{p[pr.name]=pr.values[0]});
@@ -720,7 +981,7 @@ async function loadAll(){
   const cached=getCache();
   if(cached){
     weatherData=cached;loadedCount=CPS.length;updateProgress();
-    document.getElementById('updateInfo').textContent='✅ Dati dalla cache — '+new Date().toLocaleTimeString('it-IT');
+    document.getElementById('updateInfo').textContent=t('cacheText')+' '+new Date().toLocaleTimeString(LOCALE_MAP[currentLang]||'it-IT');
     CPS.forEach(cp=>{const card=document.getElementById('card'+cp.n);card.classList.remove('loading');card.classList.add('loaded');if(card.classList.contains('open')){renderWeather(cp.n,'ecmwf');renderTimeline(cp.n,'ecmwf')}});
     renderCharts();generateAlerts();return;
   }
@@ -730,19 +991,19 @@ async function loadAll(){
     renderCharts();
   }
   setCache(weatherData);generateAlerts();
-  document.getElementById('updateInfo').textContent='✅ Aggiornato: '+new Date().toLocaleTimeString('it-IT')+' — Tocca un checkpoint per i dettagli';
+  document.getElementById('updateInfo').textContent=t('updatedInfo')+new Date().toLocaleTimeString(LOCALE_MAP[currentLang]||'it-IT');
 }
 
 function refreshAll(){
   localStorage.removeItem(CACHE_KEY);weatherData={};
   CPS.forEach(cp=>{const card=document.getElementById('card'+cp.n);card.classList.remove('loaded','error');card.classList.add('loading');const badges=document.getElementById('badges'+cp.n);badges.querySelectorAll('.badge-alert-warn,.badge-alert-danger').forEach(b=>b.remove())});
-  document.getElementById('updateInfo').textContent='🔄 Aggiornamento in corso...';
-  document.getElementById('alertList').innerHTML='<div class="wx-loading"><div class="spinner"></div><br>Analisi in corso...</div>';
+  document.getElementById('updateInfo').textContent=t('refreshText');
+  document.getElementById('alertList').innerHTML='<div class="wx-loading"><div class="spinner"></div><br>'+t('analysisText')+'</div>';
   loadAll();
 }
 
 let resizeTimer;
-window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(renderCharts,200)});
+window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{renderCharts();drawMiniMap();},200)});
 
 
 // ── settings.js ──
@@ -756,6 +1017,7 @@ const ORIG_CPS = JSON.parse(JSON.stringify(CPS)); // snapshot orari originali
 
 let currentFontSize = DEFAULT_FONT;
 let speedOverrides = {}; // { segmentIndex: kmh }
+let stopOverrides = {};  // { checkpointNumber: minutes }
 
 // ── Persistenza ──────────────────────────────────────────────────────────────
 function loadSettings() {
@@ -764,13 +1026,20 @@ function loadSettings() {
     if (s) {
       if (s.fontSize)       currentFontSize = s.fontSize;
       if (s.speedOverrides) speedOverrides  = s.speedOverrides;
+      if (s.stopOverrides)  stopOverrides   = s.stopOverrides;
+      if (s.lang)           currentLang     = s.lang;
     }
   } catch(e) {}
 }
 
 function saveSettings() {
   try {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ fontSize: currentFontSize, speedOverrides }));
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+      fontSize: currentFontSize,
+      speedOverrides,
+      stopOverrides,
+      lang: currentLang
+    }));
   } catch(e) {}
 }
 
@@ -790,6 +1059,8 @@ function changeFontSize(delta) {
 // ── Apertura / chiusura pannello ─────────────────────────────────────────────
 function openSettings() {
   buildSpeedGrid();
+  buildStopGrid();
+  selectLanguageInputs();
   document.getElementById('settingsOverlay').classList.add('open');
   document.getElementById('btnSettings').classList.add('active');
 }
@@ -827,6 +1098,59 @@ function buildSpeedGrid() {
     </div>`;
   }
   grid.innerHTML = html;
+}
+
+function buildStopGrid() {
+  const grid = document.getElementById('stopGrid');
+  if (!grid) return;
+  let html = '';
+  for (let i = 1; i < CPS.length - 1; i++) {
+    const cp = CPS[i];
+    const currentStop = stopOverrides[cp.n] !== undefined ? stopOverrides[cp.n] : (cp.stopMinutes || 0);
+    html += `<div class="speed-row">
+      <div class="speed-row-info">
+        <div class="speed-row-name">CP${cp.n} — ${cp.name}</div>
+        <div class="speed-row-meta">${currentStop} min</div>
+      </div>
+      <div class="speed-input-wrap">
+        <input class="speed-input" type="number" id="stop${cp.n}" min="0" max="600" step="5"
+          value="${currentStop}" oninput="onStopInput(${cp.n})">
+        <span class="speed-unit">min</span>
+      </div>
+    </div>`;
+  }
+  grid.innerHTML = html;
+}
+
+function onStopInput(cpNumber) {
+  const input = document.getElementById('stop' + cpNumber);
+  const val = parseInt(input.value, 10);
+  if (!isNaN(val) && val >= 0) {
+    const cp = CPS.find(c => c.n === cpNumber);
+    if (cp) {
+      const original = cp.stopMinutes || 0;
+      if (val === original) {
+        delete stopOverrides[cpNumber];
+      } else {
+        stopOverrides[cpNumber] = val;
+      }
+      const meta = input.parentElement.previousElementSibling;
+      if (meta) meta.textContent = `${val} min`;
+    }
+  }
+}
+
+function selectLanguageInputs() {
+  const radios = document.querySelectorAll('input[name="lang"]');
+  radios.forEach(r => r.checked = r.value === currentLang);
+}
+
+function onLanguageChange(lang) {
+  if (!LANG_MAP || !LANG_MAP[lang]) return;
+  currentLang = lang;
+  saveSettings();
+  selectLanguageInputs();
+  if (typeof applyLanguage === 'function') applyLanguage();
 }
 
 function computeOriginalSpeed(segIdx) {
@@ -871,11 +1195,11 @@ function recalcTimes() {
     }
     const newArr = new Date(new Date(from.dep).getTime() + (distKm / speed) * 3600000);
     to.arr = newArr.toISOString().slice(0, 19);
-    if (ORIG_CPS[i + 1].arr && ORIG_CPS[i + 1].dep) {
-      const stopMs = new Date(ORIG_CPS[i + 1].dep) - new Date(ORIG_CPS[i + 1].arr);
-      to.dep = new Date(newArr.getTime() + Math.max(0, stopMs)).toISOString().slice(0, 19);
+    if (i + 1 === CPS.length - 1) {
+      to.dep = null;
     } else {
-      to.dep = ORIG_CPS[i + 1].dep;
+      const stopMinutes = stopOverrides[to.n] !== undefined ? stopOverrides[to.n] : (to.stopMinutes || 0);
+      to.dep = new Date(newArr.getTime() + stopMinutes * 60000).toISOString().slice(0, 19);
     }
   }
 }
@@ -904,8 +1228,15 @@ function applySettings() {
 function resetSettings() {
   currentFontSize = DEFAULT_FONT;
   speedOverrides  = {};
-  ORIG_CPS.forEach((orig, idx) => { CPS[idx].arr = orig.arr; CPS[idx].dep = orig.dep; });
+  stopOverrides   = {};
+  ORIG_CPS.forEach((orig, idx) => {
+    CPS[idx].arr = orig.arr;
+    CPS[idx].dep = orig.dep;
+    CPS[idx].stopMinutes = orig.stopMinutes || 0;
+  });
   applyFontSize(currentFontSize);
+  recalcTimes();
+  if (typeof applyLanguage === 'function') applyLanguage();
   saveSettings();
   buildCards();
   CPS.forEach(cp => {
@@ -919,11 +1250,14 @@ function resetSettings() {
   renderCharts();
   generateAlerts();
   buildSpeedGrid();
+  buildStopGrid();
 }
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 loadSettings();
 applyFontSize(currentFontSize);
+recalcTimes();
+if (typeof applyLanguage === 'function') applyLanguage();
 
 
 // ── pwa.js (inlined) ──
