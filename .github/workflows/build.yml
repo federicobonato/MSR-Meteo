@@ -3,7 +3,7 @@ name: Build & Deploy MSR Meteo
 on:
   push:
     branches: [main]
-  workflow_dispatch:
+  workflow_dispatch:   # permette lancio manuale dal tab Actions
 
 permissions:
   contents: write
@@ -14,15 +14,19 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
+<<<<<<< HEAD
+=======
+
+>>>>>>> 552c1e2 (Finalize localization and update app features)
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Build (Python)
-        run: python3 msr-meteo/build.py
+        run: python3 build.py
 
       - name: Deploy su GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./msr-meteo/dist
+          publish_dir: ./dist
           publish_branch: gh-pages

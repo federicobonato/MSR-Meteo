@@ -1,0 +1,20 @@
+{
+  "name": "MSR 2026 Meteo Gara",
+  "short_name": "MSR Meteo",
+  "description": "Midnight Sun Randonnée 2026 – Meteo checkpoint in tempo reale",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d1b2a",
+  "theme_color": "#e8872a",
+  "lang": "it",
+  "icons": [
+    {
+      "src": "https://midnightsunrandonnee.se/wp-content/uploads/2019/12/cropped-MSR-favicon-1-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["sports", "weather"]
+}
