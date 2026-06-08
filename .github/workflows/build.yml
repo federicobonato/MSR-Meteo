@@ -14,10 +14,6 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-<<<<<<< HEAD
-=======
-
->>>>>>> 552c1e2 (Finalize localization and update app features)
       - name: Checkout
         uses: actions/checkout@v4
 
