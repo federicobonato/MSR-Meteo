@@ -1198,12 +1198,7 @@ function onLanguageChange(lang) {
 }
 
 function computeOriginalSpeed(segIdx) {
-  const from = ORIG_CPS[segIdx];
-  const to   = ORIG_CPS[segIdx + 1];
-  if (!from.dep || !to.arr) return DEFAULT_SPEEDS[segIdx] || 15.0;
-  const travelH = (new Date(to.arr) - new Date(from.dep)) / 3600000;
-  if (travelH <= 0) return DEFAULT_SPEEDS[segIdx] || 15.0;
-  return Math.round((to.kms / travelH) * 10) / 10;
+  return DEFAULT_SPEEDS[segIdx] || 15.0;
 }
 
 function onSpeedInput(i) {
@@ -1225,26 +1220,29 @@ function formatDuration(seconds) {
 
 // ── Ricalcolo orari ──────────────────────────────────────────────────────────
 function recalcTimes() {
-  // Start da Umeå fisso alle 23:30 per il primo checkpoint
+  CPS.forEach(cp => {
+    cp.arr = null;
+    cp.dep = null;
+  });
   CPS[0].dep = START_DEP;
-  CPS[0].arr = ORIG_CPS[0].arr;
   for (let i = 0; i < CPS.length - 1; i++) {
     const from   = CPS[i];
     const to     = CPS[i + 1];
-    const distKm = ORIG_CPS[i + 1].kms;
-    const speed  = speedOverrides[i] !== undefined ? speedOverrides[i] : (DEFAULT_SPEEDS[i] || computeOriginalSpeed(i));
+    const distKm = to.kms;
+    const speed  = speedOverrides[i] !== undefined ? speedOverrides[i] : computeOriginalSpeed(i);
     if (!from.dep || distKm <= 0 || speed <= 0) {
-      to.arr = ORIG_CPS[i + 1].arr;
-      to.dep = ORIG_CPS[i + 1].dep;
+      to.arr = null;
+      to.dep = null;
       continue;
     }
-    const newArr = new Date(new Date(from.dep).getTime() + (distKm / speed) * 3600000);
-    to.arr = newArr.toISOString().slice(0, 19);
+    const travelMs = (distKm / speed) * 3600000;
+    const newArr = new Date(new Date(from.dep).getTime() + travelMs);
+    to.arr = newArr.toISOString();
     if (i + 1 === CPS.length - 1) {
       to.dep = null;
     } else {
       const stopMinutes = stopOverrides[to.n] !== undefined ? stopOverrides[to.n] : (to.stopMinutes || 0);
-      to.dep = new Date(newArr.getTime() + stopMinutes * 60000).toISOString().slice(0, 19);
+      to.dep = new Date(newArr.getTime() + stopMinutes * 60000).toISOString();
     }
   }
 }
@@ -1275,9 +1273,9 @@ function resetSettings() {
   speedOverrides  = {};
   stopOverrides   = {};
   ORIG_CPS.forEach((orig, idx) => {
-    CPS[idx].arr = orig.arr;
-    CPS[idx].dep = orig.dep;
     CPS[idx].stopMinutes = orig.stopMinutes || 0;
+    CPS[idx].arr = null;
+    CPS[idx].dep = null;
   });
   applyFontSize(currentFontSize);
   recalcTimes();
