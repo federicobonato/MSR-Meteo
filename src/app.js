@@ -44,7 +44,7 @@ const LANG_MAP = {
     stopLabelShort: 'sosta',
     startMeta: 'PARTENZA',
     finishMeta: 'ARRIVO',
-    mapLegend: 'Norvegia: yr.no • Svezia: SMHI'
+    mapLegend: 'Norvegia: yr.no • Meteoblue'
   },
   en: {
     title: '🌅 MSR 2026 — Race Weather · Midnight Sun Randonnée',
@@ -82,7 +82,7 @@ const LANG_MAP = {
     stopLabelShort: 'stop',
     startMeta: 'START',
     finishMeta: 'FINISH',
-    mapLegend: 'Norway: yr.no • Sweden: SMHI'
+    mapLegend: 'Norway: yr.no • Meteoblue'
   },
   de: {
     title: '🌅 MSR 2026 — Rennwetter · Midnight Sun Randonnée',
@@ -120,7 +120,7 @@ const LANG_MAP = {
     stopLabelShort: 'Stopp',
     startMeta: 'START',
     finishMeta: 'ZIEL',
-    mapLegend: 'Norwegen: yr.no • Schweden: SMHI'
+    mapLegend: 'Norwegen: yr.no • Meteoblue'
   },
   fr: {
     title: '🌅 MSR 2026 — Météo de course · Midnight Sun Randonnée',
@@ -158,7 +158,7 @@ const LANG_MAP = {
     stopLabelShort: 'pause',
     startMeta: 'DÉPART',
     finishMeta: 'ARRIVÉE',
-    mapLegend: 'Norvège: yr.no • Suède: SMHI'
+    mapLegend: 'Norvège: yr.no • Meteoblue'
   }
 };
 const LOCALE_MAP = {it:'it-IT',en:'en-US',de:'de-DE',fr:'fr-FR'};
@@ -198,8 +198,8 @@ function applyLanguage() {
 }
 
 function flag(cc){return cc==='SE'?'🇸🇪':'🇳🇴'}
-function sourceOrder(cp){if(cp.cc==='SE')return['smhi','yr','ecmwf','forecast'];if(cp.cc==='NO')return['yr','ecmwf','forecast'];return['ecmwf','forecast','yr','smhi']}
-function sourceLabel(src){return{ecmwf:'ECMWF',forecast:'Forecast',yr:'yr.no',smhi:'SMHI'}[src]||src}
+function sourceOrder(cp){return['meteoblue','yr','ecmwf','forecast'];}
+function sourceLabel(src){return{ecmwf:'ECMWF',forecast:'Forecast',yr:'yr.no',meteoblue:'Meteoblue'}[src]||src}
 function tempColor(t){if(t<5)return'temp-blue';if(t<10)return'temp-cyan';if(t<15)return'temp-green';if(t<20)return'temp-yellow';if(t<25)return'temp-orange';return'temp-red'}
 function tempHex(t){if(t<5)return'#60a5fa';if(t<10)return'#22d3ee';if(t<15)return'#4ade80';if(t<20)return'#facc15';if(t<25)return'#fb923c';return'#ef4444'}
 function windArrow(deg){if(deg==null)return'';const a=['⬇️','↙️','⬅️','↖️','⬆️','↗️','➡️','↘️'];return a[Math.round(deg/45)%8]}
@@ -223,7 +223,7 @@ function buildCards(){
     const numClass=cp.n===1?'start':cp.n===CPS.length?'finish':'';
     const isNR=isNight(cp.arr)||isNight(cp.dep);
     const sources=sourceOrder(cp);
-    const activeSrc=sources.find(src=>src!=='smhi'||cp.cc==='SE')||'ecmwf';
+    const activeSrc=sources[0]||'ecmwf';
     const stopLabel=cp.stopMinutes?` · ${cp.stopMinutes} ${t('stopLabelShort')}`:'';
     container.innerHTML+=`
 <div class="card" id="card${cp.n}" onclick="toggleCard(${cp.n},event)">
@@ -245,13 +245,13 @@ ${cp.arr?`<div class="time-badge"><span class="lbl">${t('arrivalLabel')}</span> 
 ${cp.dep?`<div class="time-badge"><span class="lbl">${t('departureLabel')}</span> ${fmtTime(cp.dep)}</div>`:''}
 </div>
 <div class="source-tabs" id="tabs${cp.n}">
-${sources.map(src=>`<button class="src-tab ${src===activeSrc?'active':''}" data-src="${src}" ${src==='smhi'&&cp.cc!=='SE'?'disabled':''} onclick="switchSrc(${cp.n},'${src}',this)" ${src==='smhi'&&cp.cc!=='SE'?'title="Solo 🇸🇪"':''}>${sourceLabel(src)}</button>`).join('')}
+${sources.map(src=>`<button class="src-tab ${src===activeSrc?'active':''}" data-src="${src}" onclick="switchSrc(${cp.n},'${src}',this)">${sourceLabel(src)}</button>`).join('')}
 </div>
 <div class="weather-display" id="wx${cp.n}"><div class="wx-loading"><div class="spinner"></div><br>${t('loadingText')}</div></div>
 <div id="timeline${cp.n}" class="timeline"></div>
 <div class="links-row">
 <a href="https://www.yr.no/en/forecast/daily-table/${cp.lat},${cp.lon}" target="_blank" rel="noopener">🔗 yr.no</a>
-${cp.cc==='SE'?`<a href="${cp.n===1?'https://www.smhi.se/en/weather/warnings-and-forecasts/weather-forecast/q/Ume%C3%A5/602150':'https://www.smhi.se/en/weather/forecast'}" target="_blank" rel="noopener">🔗 SMHI</a>`:''}
+<a href="https://www.meteoblue.com/en/weather/forecast/${cp.lat.toFixed(3)},${cp.lon.toFixed(3)}" target="_blank" rel="noopener">🔗 Meteoblue</a>
 <a href="https://open-meteo.com/en/docs/ecmwf-api#latitude=${cp.lat}&longitude=${cp.lon}" target="_blank" rel="noopener">🔗 Open-Meteo</a>
 </div>
 </div>
@@ -548,6 +548,12 @@ async function fetchForecast(cp){
   return{times:h.time,temperature:h.temperature_2m,apparent_temp:h.apparent_temperature,precipitation:h.precipitation,weather_code:h.weather_code,cloud_cover:h.cloud_cover,wind_speed:h.wind_speed_10m,wind_dir:h.wind_direction_10m,wind_gust:h.wind_gusts_10m,humidity:h.relative_humidity_2m}}catch(e){return{error:'Rete non disponibile'}}
 }
 
+async function fetchMeteoblue(cp){
+  const url=`https://api.open-meteo.com/v1/forecast?latitude=${cp.lat}&longitude=${cp.lon}&hourly=temperature_2m,apparent_temperature,precipitation,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m,wind_gusts_10m,relative_humidity_2m&timezone=${METEO_TIMEZONE}&start_date=${METEO_DATE_FROM}&end_date=${METEO_DATE_TO}&models=meteoblue`;
+  try{const r=await fetch(url);const j=await r.json();if(j.error)return{error:j.reason||'Errore API'};const h=j.hourly;
+  return{times:h.time,temperature:h.temperature_2m,apparent_temp:h.apparent_temperature,precipitation:h.precipitation,weather_code:h.weather_code,cloud_cover:h.cloud_cover,wind_speed:h.wind_speed_10m,wind_dir:h.wind_direction_10m,wind_gust:h.wind_gusts_10m,humidity:h.relative_humidity_2m}}catch(e){return{error:'Rete non disponibile'}}
+}
+
 async function fetchYrNo(cp){
   const url=`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${cp.lat}&lon=${cp.lon}`;
   try{const r=await fetch(url);if(!r.ok)return{error:'HTTP '+r.status};const j=await r.json();
@@ -563,35 +569,18 @@ async function fetchYrNo(cp){
 
 function symbolToWmo(sym){if(!sym)return null;const s=sym.replace(/_day|_night|_polartwilight/g,'');const map={clearsky:0,fair:1,partlycloudy:2,cloudy:3,fog:45,lightrainshowers:80,rainshowers:81,heavyrainshowers:82,lightrain:61,rain:63,heavyrain:65,lightrainandthunder:95,rainandthunder:95,heavyrainandthunder:99,lightsleet:66,sleet:66,heavysleet:67,lightsnow:71,snow:73,heavysnow:75,lightsnowshowers:85,snowshowers:85,heavysnowshowers:86,sleetshowers:80,lightsleetshowers:80,heavysleetshowers:82,sleetshowersandthunder:95,rainshowersandthunder:95,lightrainshowersandthunder:95,heavyrainshowersandthunder:99,snowandthunder:95,lightsnowandthunder:95,heavysnowandthunder:99,sleetandthunder:95,lightsleetandthunder:95,heavysleetandthunder:99,lightssleetshowersandthunder:95,lightssnowshowersandthunder:95,snowshowersandthunder:95};return map[s]!=null?map[s]:3}
 
-async function fetchSMHI(cp){
-  if(cp.cc!=='SE')return{error:'Solo località svedesi'};
-  let lastError='SMHI non disponibile';
-  for(const decimals of [4,3,2]){
-    const lon=cp.lon.toFixed(decimals);const lat=cp.lat.toFixed(decimals);
-    const url=`https://opendata-download-metfcst.smhi.se/api/category/pmp3g/version/2/geotype/point/lon/${lon}/lat/${lat}/data.json`;
-    try{const r=await fetch(url,{headers:{Accept:'application/json'}});if(!r.ok){lastError='HTTP '+r.status; if(r.status===404)continue;return{error:lastError}}const j=await r.json();
-    const ts=j.timeSeries;const times=[],temperature=[],precipitation=[],weather_code=[],cloud_cover=[],wind_speed=[],wind_dir=[],wind_gust=[],humidity=[];
-    ts.forEach(t=>{const utc=new Date(t.validTime);const local=new Date(utc.getTime()+2*3600000);times.push(local.toISOString().slice(0,16));const p={};t.parameters.forEach(pr=>{p[pr.name]=pr.values[0]});
-    temperature.push(p.t!=null?p.t:null);wind_speed.push(p.ws!=null?p.ws*3.6:null);wind_dir.push(p.wd!=null?p.wd:null);wind_gust.push(p.gust!=null?p.gust*3.6:null);precipitation.push(p.pmean!=null?p.pmean:null);cloud_cover.push(p.tcc_mean!=null?p.tcc_mean*12.5:null);humidity.push(p.r!=null?p.r:null);weather_code.push(smhiWsymb(p.Wsymb2))});
-    return{times,temperature,apparent_temp:temperature.map(()=>null),precipitation,weather_code,cloud_cover,wind_speed,wind_dir,wind_gust,humidity};
-    }catch(e){lastError=e.message||'Rete non disponibile'}}
-  return{error:lastError};
-}
-
-function smhiWsymb(w){if(w==null)return null;const map={1:0,2:1,3:2,4:3,5:3,6:3,7:45,8:80,9:61,10:63,11:82,12:95,13:66,14:66,15:75,16:71,17:73,18:65,19:71,20:81,21:95,22:85,23:85,24:95,25:65,26:75,27:95};return map[w]!=null?map[w]:3}
-
 function updateProgress(){document.getElementById('progressFill').style.width=Math.round(loadedCount/CPS.length*100)+'%'}
 
 async function fetchAllForCP(cp){
-  const [ecmwf,forecast,yr,smhi]=await Promise.allSettled([
+  const [ecmwf,forecast,yr,meteoblue]=await Promise.allSettled([
     fetchECMWF(cp),fetchForecast(cp),fetchYrNo(cp),
-    cp.cc==='SE'?fetchSMHI(cp):Promise.resolve({error:'Solo località svedesi'})
+    fetchMeteoblue(cp)
   ]);
   return{
     ecmwf:ecmwf.status==='fulfilled'?ecmwf.value:{error:'Errore fetch'},
     forecast:forecast.status==='fulfilled'?forecast.value:{error:'Errore fetch'},
     yr:yr.status==='fulfilled'?yr.value:{error:'Errore fetch'},
-    smhi:smhi.status==='fulfilled'?smhi.value:{error:smhi.reason?.message||'Errore SMHI'}
+    meteoblue:meteoblue.status==='fulfilled'?meteoblue.value:{error:meteoblue.reason?.message||'Errore Meteoblue'}
   };
 }
 
@@ -606,7 +595,7 @@ async function loadAll(){
   }
   for(let i=0;i<CPS.length;i+=3){
     const batch=CPS.slice(i,i+3);const results=await Promise.all(batch.map(cp=>fetchAllForCP(cp)));
-    batch.forEach((cp,j)=>{weatherData[cp.n]=results[j];loadedCount++;updateProgress();const card=document.getElementById('card'+cp.n);card.classList.remove('loading');const hasData=!results[j].ecmwf.error||!results[j].forecast.error||!results[j].yr.error;card.classList.add(hasData?'loaded':'error');if(card.classList.contains('open')){renderWeather(cp.n,'ecmwf');renderTimeline(cp.n,'ecmwf')}});
+    batch.forEach((cp,j)=>{weatherData[cp.n]=results[j];loadedCount++;updateProgress();const card=document.getElementById('card'+cp.n);card.classList.remove('loading');const hasData=!results[j].ecmwf.error||!results[j].forecast.error||!results[j].yr.error||!results[j].meteoblue.error;card.classList.add(hasData?'loaded':'error');if(card.classList.contains('open')){renderWeather(cp.n,'ecmwf');renderTimeline(cp.n,'ecmwf')}});
     renderCharts();
   }
   setCache(weatherData);generateAlerts();

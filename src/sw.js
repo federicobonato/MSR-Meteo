@@ -17,9 +17,7 @@ self.addEventListener('fetch', e => {
   const url = e.request.url;
   // API meteo sempre da rete (dati freschi)
   if (url.includes('open-meteo.com') ||
-      url.includes('api.met.no')     ||
-      url.includes('smhi.se')        ||
-      url.includes('opendata-download')) {
+      url.includes('api.met.no')) {
     return;
   }
   e.respondWith(
