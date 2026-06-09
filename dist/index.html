@@ -1237,12 +1237,12 @@ function recalcTimes() {
     }
     const travelMs = (distKm / speed) * 3600000;
     const newArr = new Date(new Date(from.dep).getTime() + travelMs);
-    to.arr = newArr.toISOString().slice(0, 19);
+    to.arr = newArr.toISOString();
     if (i + 1 === CPS.length - 1) {
       to.dep = null;
     } else {
       const stopMinutes = stopOverrides[to.n] !== undefined ? stopOverrides[to.n] : (to.stopMinutes || 0);
-      to.dep = new Date(newArr.getTime() + stopMinutes * 60000).toISOString().slice(0, 19);
+      to.dep = new Date(newArr.getTime() + stopMinutes * 60000).toISOString();
     }
   }
 }
