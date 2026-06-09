@@ -338,6 +338,11 @@ function switchSrc(n,src,btn){
   renderTimeline(n,src);
 }
 
+function setActiveSourceTab(n,src){
+  const tabs=document.querySelectorAll('#tabs'+n+' .src-tab');
+  tabs.forEach(t=>t.classList.toggle('active', t.dataset.src===src));
+}
+
 function findClosest(times,target){
   if(!times||!times.length||!target)return -1;
   const tgt=new Date(target).getTime();
@@ -367,6 +372,7 @@ function renderWeather(n,src){
   const data=weatherData[n];
   if(!data){el.innerHTML='<div class="wx-loading"><div class="spinner"></div><br>Caricamento...</div>';return}
   src=findWorkingSource(n,cp,src);
+  setActiveSourceTab(n,src);
   const refTime=cp.arr||cp.dep;
   const srcData=data[src];
   if(!srcData||srcData.error){el.innerHTML=`<div class="wx-error">⚠️ ${srcData?srcData.error:'Non disponibile'}</div>`;return}
