@@ -323,27 +323,17 @@ function toggleCard(n,e){
   const card=document.getElementById('card'+n);
   card.classList.toggle('open');
   if(card.classList.contains('open')&&weatherData[n]){
-    const cp=CPS[n-1];
     const activeBtn=document.querySelector('#tabs'+n+' .src-tab.active');
-    let src=activeBtn?activeBtn.dataset.src:'ecmwf';
-    src=findWorkingSource(n,cp,src);
-    const allTabs=document.querySelectorAll('#tabs'+n+' .src-tab');
-    allTabs.forEach(t=>t.classList.remove('active'));
-    const actualBtn=Array.from(allTabs).find(t=>t.dataset.src===src);
-    if(actualBtn)actualBtn.classList.add('active');
+    const src=activeBtn?activeBtn.dataset.src:'ecmwf';
     renderWeather(n,src);
     renderTimeline(n,src);
   }
 }
 
 function switchSrc(n,src,btn){
-  const cp=CPS[n-1];
-  src=findWorkingSource(n,cp,src);
   const tabs=document.querySelectorAll('#tabs'+n+' .src-tab');
   tabs.forEach(t=>t.classList.remove('active'));
-  const activeBtn=Array.from(tabs).find(t=>t.dataset.src===src);
-  if(activeBtn)activeBtn.classList.add('active');
-  else if(btn)btn.classList.add('active');
+  if(btn)btn.classList.add('active');
   renderWeather(n,src);
   renderTimeline(n,src);
 }
